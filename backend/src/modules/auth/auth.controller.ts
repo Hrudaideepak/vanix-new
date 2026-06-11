@@ -1,19 +1,23 @@
-import { Response, NextFunction } from 'express';
-import { AuthRequest } from '@custom-types/index';
-import { AuthService } from './auth.service';
-import { ApiResponse } from '@utils/apiResponse';
+import { Response, NextFunction } from "express";
+import { AuthRequest } from "@custom-types/index";
+import { AuthService } from "./auth.service";
+import { ApiResponse } from "@utils/apiResponse";
 
 const authService = new AuthService();
 
 export class AuthController {
-  async sendOtp(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async sendOtp(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { phone, email, type } = req.body;
       await authService.sendOtp({ phone, email, type });
 
       ApiResponse.success({
         res,
-        message: `OTP sent successfully to your ${type === 'sms' ? 'phone' : 'email'}`,
+        message: `OTP sent successfully to your ${type === "sms" ? "phone" : "email"}`,
         data: { sent: true },
       });
     } catch (error) {
@@ -21,13 +25,17 @@ export class AuthController {
     }
   }
 
-  async verifyOtp(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async verifyOtp(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const result = await authService.verifyOtp(req.body);
 
       ApiResponse.success({
         res,
-        message: 'Login successful',
+        message: "Login successful",
         data: result,
       });
     } catch (error) {
@@ -35,13 +43,17 @@ export class AuthController {
     }
   }
 
-  async googleAuth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async googleAuth(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const result = await authService.googleAuth(req.body);
 
       ApiResponse.success({
         res,
-        message: 'Login successful',
+        message: "Login successful",
         data: result,
       });
     } catch (error) {
@@ -49,14 +61,18 @@ export class AuthController {
     }
   }
 
-  async refreshToken(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async refreshToken(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { refreshToken } = req.body;
       const result = await authService.refreshToken(refreshToken);
 
       ApiResponse.success({
         res,
-        message: 'Token refreshed',
+        message: "Token refreshed",
         data: result,
       });
     } catch (error) {
@@ -64,27 +80,35 @@ export class AuthController {
     }
   }
 
-  async logout(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async logout(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const token = req.headers.authorization?.split(' ')[1] || '';
+      const token = req.headers.authorization?.split(" ")[1] || "";
       await authService.logout(req.user!.id, req.sessionId!, token);
 
       ApiResponse.success({
         res,
-        message: 'Logged out successfully',
+        message: "Logged out successfully",
       });
     } catch (error) {
       next(error);
     }
   }
 
-  async logoutAll(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async logoutAll(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       await authService.logoutAll(req.user!.id);
 
       ApiResponse.success({
         res,
-        message: 'Logged out from all devices',
+        message: "Logged out from all devices",
       });
     } catch (error) {
       next(error);

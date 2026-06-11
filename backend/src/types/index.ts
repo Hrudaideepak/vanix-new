@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import { Request } from "express";
 
 // Extend Express Request with auth info
 export interface AuthRequest extends Request {
@@ -23,7 +23,7 @@ export interface AuthRequest extends Request {
 }
 
 // Content types
-export type ContentType = 'movie' | 'series' | 'episode';
+export type ContentType = "movie" | "series" | "episode";
 
 // API filter types
 export interface ContentFilters {
@@ -38,10 +38,10 @@ export interface ContentFilters {
 }
 
 // Video quality
-export type VideoQuality = '480p' | '720p' | '1080p' | '4k';
+export type VideoQuality = "480p" | "720p" | "1080p" | "4k";
 
 // Subscription plan names
-export type PlanName = 'mobile' | 'basic' | 'standard' | 'premium' | 'family';
+export type PlanName = "mobile" | "basic" | "standard" | "premium" | "family";
 
 // Notification payload
 export interface NotificationPayload {

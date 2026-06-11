@@ -45,7 +45,17 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('VANIX', style: GoogleFonts.orbitron(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 3)),
+                    Row(
+                      children: [
+                        Image.asset(
+                          'assets/images/vanix_logo.png',
+                          width: 24,
+                          height: 24,
+                        ),
+                        const SizedBox(width: 8),
+                        Text('VANIX', style: GoogleFonts.orbitron(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 3)),
+                      ],
+                    ),
                     const SizedBox(height: 16),
 
                     // Search bar

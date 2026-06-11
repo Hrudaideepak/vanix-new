@@ -1,13 +1,17 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/vanix_colors.dart';
+import '../../core/models/models.dart';
+import '../downloads/providers/download_provider.dart';
 
-class VideoPlayerScreen extends StatefulWidget {
+class VideoPlayerScreen extends ConsumerStatefulWidget {
   final String contentId;
 
   const VideoPlayerScreen({
@@ -16,10 +20,11 @@ class VideoPlayerScreen extends StatefulWidget {
   });
 
   @override
-  State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
+  ConsumerState<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
 }
 
-class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
+  File? _tempPlaybackFile;
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
   bool _hasError = false;
@@ -56,11 +61,57 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _startProgressSync();
   }
 
+  Future<String> _prepareLocalVideo(String originalPath) async {
+    try {
+      final file = File(originalPath);
+      if (!await file.exists()) return originalPath;
+
+      final bytes = await file.readAsBytes();
+      if (bytes.length < 1024) return originalPath;
+
+      final mutableBytes = List<int>.from(bytes);
+      final len = mutableBytes.length < 1024 ? mutableBytes.length : 1024;
+      for (var i = 0; i < len; i++) {
+        mutableBytes[i] = mutableBytes[i] ^ 0x5A;
+      }
+
+      final tempDir = Directory.systemTemp;
+      final tempFile = File(
+          '${tempDir.path}/temp_playback_${DateTime.now().millisecondsSinceEpoch}.mp4');
+      await tempFile.writeAsBytes(mutableBytes);
+
+      _tempPlaybackFile = tempFile;
+      debugPrint('[VideoPlayerScreen] Prepared temporary decrypted file: ${tempFile.path}');
+      return tempFile.path;
+    } catch (e) {
+      debugPrint('[VideoPlayerScreen] Failed to prepare local video: $e');
+      return originalPath;
+    }
+  }
+
   Future<void> _initializePlayer() async {
     try {
-      _videoPlayerController = VideoPlayerController.networkUrl(
-        Uri.parse(_defaultVideoUrl),
+      final downloads = ref.read(downloadProvider);
+      final downloadItem = downloads.firstWhere(
+        (item) => item.id == widget.contentId && item.status == 'COMPLETED',
+        orElse: () => const DownloadItem(id: '', title: '', videoUrl: ''),
       );
+
+      String? playUrl;
+      if (downloadItem.id.isNotEmpty && downloadItem.localPath != null) {
+        final localPath = downloadItem.localPath!;
+        playUrl = await _prepareLocalVideo(localPath);
+      }
+
+      if (playUrl != null) {
+        _videoPlayerController = VideoPlayerController.file(
+          File(playUrl),
+        );
+      } else {
+        _videoPlayerController = VideoPlayerController.networkUrl(
+          Uri.parse(_defaultVideoUrl),
+        );
+      }
 
       await _videoPlayerController.initialize();
 
@@ -260,6 +311,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _videoPlayerController.removeListener(_playerListener);
     _videoPlayerController.dispose();
     _chewieController?.dispose();
+
+    if (_tempPlaybackFile != null && _tempPlaybackFile!.existsSync()) {
+      try {
+        _tempPlaybackFile!.deleteSync();
+        debugPrint('[VideoPlayerScreen] Deleted temporary decrypted playback file: ${_tempPlaybackFile!.path}');
+      } catch (e) {
+        debugPrint('[VideoPlayerScreen] Failed to clean up temporary video file: $e');
+      }
+    }
+
     super.dispose();
   }
 

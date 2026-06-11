@@ -1,13 +1,13 @@
-import { Router } from 'express';
-import { authenticate } from '@middleware/auth.middleware';
-import { ApiResponse } from '@utils/apiResponse';
-import { prisma } from '@config/database';
-import { AuthRequest } from '@custom-types/index';
+import { Router } from "express";
+import { authenticate } from "@middleware/auth.middleware";
+import { ApiResponse } from "@utils/apiResponse";
+import { prisma } from "@config/database";
+import { AuthRequest } from "@custom-types/index";
 
 const router = Router();
 
 // Get personalized recommendations
-router.get('/', authenticate, async (req: AuthRequest, res, next) => {
+router.get("/", authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { profileId, limit = 20 } = req.query;
 
@@ -17,7 +17,7 @@ router.get('/', authenticate, async (req: AuthRequest, res, next) => {
       include: {
         movie: { include: { genres: { include: { genre: true } } } },
       },
-      orderBy: { watchedAt: 'desc' },
+      orderBy: { watchedAt: "desc" },
       take: 50,
     });
 
@@ -51,7 +51,7 @@ router.get('/', authenticate, async (req: AuthRequest, res, next) => {
           id: { notIn: watchedMovieIds },
           genres: { some: { genreId: { in: topGenreIds } } },
         },
-        orderBy: [{ avgRating: 'desc' }, { viewCount: 'desc' }],
+        orderBy: [{ avgRating: "desc" }, { viewCount: "desc" }],
         take: Number(limit),
         include: { genres: { include: { genre: true } } },
       });
@@ -59,7 +59,7 @@ router.get('/', authenticate, async (req: AuthRequest, res, next) => {
       // Fallback: popular content
       recommendations = await prisma.movie.findMany({
         where: { isPublished: true, id: { notIn: watchedMovieIds } },
-        orderBy: [{ viewCount: 'desc' }, { avgRating: 'desc' }],
+        orderBy: [{ viewCount: "desc" }, { avgRating: "desc" }],
         take: Number(limit),
         include: { genres: { include: { genre: true } } },
       });
@@ -69,9 +69,10 @@ router.get('/', authenticate, async (req: AuthRequest, res, next) => {
       res,
       data: recommendations.map((movie) => ({
         ...movie,
-        reason: topGenreIds.length > 0
-          ? `Because you watched ${watchHistory[0]?.movie?.title || 'similar content'}`
-          : 'Popular on VANIX',
+        reason:
+          topGenreIds.length > 0
+            ? `Because you watched ${watchHistory[0]?.movie?.title || "similar content"}`
+            : "Popular on VANIX",
       })),
     });
   } catch (error) {

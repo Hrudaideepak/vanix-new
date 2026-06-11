@@ -183,9 +183,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       backgroundColor: VanixColors.bgPrimary,
       appBar: AppBar(
-        title: Text(
-          'MY ACCOUNT',
-          style: GoogleFonts.orbitron(letterSpacing: 2, fontWeight: FontWeight.w800, fontSize: 18),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/vanix_logo.png',
+              width: 24,
+              height: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'MY ACCOUNT',
+              style: GoogleFonts.orbitron(letterSpacing: 2, fontWeight: FontWeight.w800, fontSize: 18),
+            ),
+          ],
         ),
         centerTitle: true,
       ),

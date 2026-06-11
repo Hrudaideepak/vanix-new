@@ -66,5 +66,36 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Google Sign-In URL Schemes -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- TODO: Replace with your Google iOS client reversed ID -->
+				<string>com.googleusercontent.apps.109283748291-xyz123456placeholder</string>
+			</array>
+		</dict>
+	</array>
+	<!-- App Transport Security for Secure API calls -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+	</dict>
+	<!-- Background Modes for Premium Video Audio Playback & PiP -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<!-- Media Access permissions -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>VANIX needs access to your photos so you can choose a profile picture.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>VANIX needs access to your camera so you can take a profile picture.</string>
 </dict>
 </plist>

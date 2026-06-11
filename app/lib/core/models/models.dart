@@ -551,7 +551,9 @@ class DownloadItem {
   final String quality;
   final int? fileSizeBytes;
   final double progress;
-  final String status; // PENDING, DOWNLOADING, COMPLETED, FAILED, EXPIRED
+  final String status; // PENDING, DOWNLOADING, COMPLETED, FAILED, EXPIRED, PAUSED
+  final String? localPath;
+  final String videoUrl;
   final DateTime? expiresAt;
 
   const DownloadItem({
@@ -562,6 +564,8 @@ class DownloadItem {
     this.fileSizeBytes,
     this.progress = 0,
     this.status = 'COMPLETED',
+    this.localPath,
+    required this.videoUrl,
     this.expiresAt,
   });
 
@@ -570,5 +574,61 @@ class DownloadItem {
     final mb = fileSizeBytes! / (1024 * 1024);
     if (mb > 1024) return '${(mb / 1024).toStringAsFixed(1)} GB';
     return '${mb.toStringAsFixed(0)} MB';
+  }
+
+  DownloadItem copyWith({
+    String? id,
+    String? title,
+    String? thumbnailUrl,
+    String? quality,
+    int? fileSizeBytes,
+    double? progress,
+    String? status,
+    String? localPath,
+    String? videoUrl,
+    DateTime? expiresAt,
+  }) {
+    return DownloadItem(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      quality: quality ?? this.quality,
+      fileSizeBytes: fileSizeBytes ?? this.fileSizeBytes,
+      progress: progress ?? this.progress,
+      status: status ?? this.status,
+      localPath: localPath ?? this.localPath,
+      videoUrl: videoUrl ?? this.videoUrl,
+      expiresAt: expiresAt ?? this.expiresAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'thumbnailUrl': thumbnailUrl,
+      'quality': quality,
+      'fileSizeBytes': fileSizeBytes,
+      'progress': progress,
+      'status': status,
+      'localPath': localPath,
+      'videoUrl': videoUrl,
+      'expiresAt': expiresAt?.toIso8601String(),
+    };
+  }
+
+  factory DownloadItem.fromJson(Map<String, dynamic> json) {
+    return DownloadItem(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      thumbnailUrl: json['thumbnailUrl'] as String?,
+      quality: json['quality'] as String? ?? '720p',
+      fileSizeBytes: json['fileSizeBytes'] as int?,
+      progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
+      status: json['status'] as String? ?? 'COMPLETED',
+      localPath: json['localPath'] as String?,
+      videoUrl: json['videoUrl'] as String? ?? '',
+      expiresAt: json['expiresAt'] != null ? DateTime.parse(json['expiresAt'] as String) : null,
+    );
   }
 }

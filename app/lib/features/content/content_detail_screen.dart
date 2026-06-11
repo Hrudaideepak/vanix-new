@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/vanix_colors.dart';
 import '../../core/widgets/vanix_button.dart';
 import '../../core/widgets/content_card.dart';
+import '../downloads/providers/download_provider.dart';
+import '../../core/models/models.dart';
 
 class ContentDetailScreen extends ConsumerStatefulWidget {
   final String contentId;
@@ -22,9 +24,6 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> with 
   late TabController _tabController;
   int _selectedSeasonIndex = 0;
   bool _isWatchlisted = false;
-  bool _isDownloaded = false;
-  double _downloadProgress = 0.0;
-  bool _isDownloading = false;
 
   // Mock content details
   late final bool isSeries;
@@ -117,47 +116,34 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> with 
     );
   }
 
-  void _startDownload() {
-    if (_isDownloaded) {
-      // Remove download
-      setState(() {
-        _isDownloaded = false;
-        _downloadProgress = 0.0;
-      });
+  void _startDownload(DownloadItem? downloadItem) {
+    if (downloadItem != null && downloadItem.status == 'COMPLETED') {
+      ref.read(downloadProvider.notifier).removeDownload(widget.contentId);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Download removed')),
+        const SnackBar(content: Text('Download removed')),
       );
       return;
     }
 
-    setState(() {
-      _isDownloading = true;
-      _downloadProgress = 0.0;
-    });
+    if (downloadItem != null && downloadItem.status == 'DOWNLOADING') {
+      ref.read(downloadProvider.notifier).pauseDownload(widget.contentId);
+      return;
+    }
 
-    // Simulate download progress
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (!mounted) return false;
-      setState(() {
-        _downloadProgress += 0.1;
-      });
-      if (_downloadProgress >= 1.0) {
-        setState(() {
-          _isDownloading = false;
-          _isDownloaded = true;
-          _downloadProgress = 1.0;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Download complete!'),
-            backgroundColor: VanixColors.success,
-          ),
-        );
-        return false;
-      }
-      return true;
-    });
+    if (downloadItem != null && downloadItem.status == 'PAUSED') {
+      ref.read(downloadProvider.notifier).resumeDownload(widget.contentId);
+      return;
+    }
+
+    ref.read(downloadProvider.notifier).startDownload(
+      id: widget.contentId,
+      title: title,
+      thumbnailUrl: isSeries
+          ? 'https://images.unsplash.com/photo-1578894381163-e72c17f2d45f?w=200'
+          : 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=200',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      quality: '1080p',
+    );
   }
 
   void _shareContent() {
@@ -168,6 +154,15 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> with 
 
   @override
   Widget build(BuildContext context) {
+    final downloads = ref.watch(downloadProvider);
+    final downloadItemIndex = downloads.indexWhere((item) => item.id == widget.contentId);
+    final downloadItem = downloadItemIndex != -1 ? downloads[downloadItemIndex] : null;
+
+    final isDownloaded = downloadItem?.status == 'COMPLETED';
+    final isDownloading = downloadItem?.status == 'DOWNLOADING';
+    final isPaused = downloadItem?.status == 'PAUSED';
+    final progress = downloadItem?.progress ?? 0.0;
+
     return Scaffold(
       backgroundColor: VanixColors.bgPrimary,
       body: CustomScrollView(
@@ -336,16 +331,18 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> with 
                         onTap: _toggleWatchlist,
                       ),
                       _buildActionItem(
-                        icon: _isDownloading 
-                            ? Icons.hourglass_empty
-                            : (_isDownloaded ? Icons.download_done : Icons.download),
-                        label: _isDownloading 
-                            ? '${(_downloadProgress * 100).toStringAsFixed(0)}%' 
-                            : 'Download',
-                        color: _isDownloaded 
+                        icon: isDownloading 
+                            ? Icons.pause
+                            : (isPaused 
+                                ? Icons.play_arrow 
+                                : (isDownloaded ? Icons.download_done : Icons.download)),
+                        label: isDownloading 
+                            ? '${(progress * 100).toStringAsFixed(0)}%' 
+                            : (isPaused ? 'Paused' : (isDownloaded ? 'Downloaded' : 'Download')),
+                        color: isDownloaded 
                             ? VanixColors.success 
-                            : (_isDownloading ? VanixColors.vanixRed : Colors.white),
-                        onTap: _startDownload,
+                            : (isDownloading || isPaused ? VanixColors.vanixRed : Colors.white),
+                        onTap: () => _startDownload(downloadItem),
                       ),
                       _buildActionItem(
                         icon: Icons.share_outlined,

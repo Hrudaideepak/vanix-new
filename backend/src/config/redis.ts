@@ -1,6 +1,6 @@
-import Redis from 'ioredis';
-import { env } from './env';
-import { logger } from '@utils/logger';
+import Redis from "ioredis";
+import { env } from "./env";
+import { logger } from "@utils/logger";
 
 class RedisClient {
   private static instance: Redis | null = null;
@@ -14,22 +14,22 @@ class RedisClient {
           return delay;
         },
         reconnectOnError(err: Error) {
-          const targetErrors = ['READONLY', 'ECONNRESET', 'ECONNREFUSED'];
+          const targetErrors = ["READONLY", "ECONNRESET", "ECONNREFUSED"];
           return targetErrors.some((e) => err.message.includes(e));
         },
         lazyConnect: true,
       });
 
-      RedisClient.instance.on('connect', () => {
-        logger.info('✅ Redis connected successfully');
+      RedisClient.instance.on("connect", () => {
+        logger.info("✅ Redis connected successfully");
       });
 
-      RedisClient.instance.on('error', (err: Error) => {
-        logger.error('❌ Redis connection error:', err.message);
+      RedisClient.instance.on("error", (err: Error) => {
+        logger.error("❌ Redis connection error:", err.message);
       });
 
-      RedisClient.instance.on('close', () => {
-        logger.warn('Redis connection closed');
+      RedisClient.instance.on("close", () => {
+        logger.warn("Redis connection closed");
       });
     }
 
@@ -40,7 +40,7 @@ class RedisClient {
     if (RedisClient.instance) {
       await RedisClient.instance.quit();
       RedisClient.instance = null;
-      logger.info('Redis disconnected');
+      logger.info("Redis disconnected");
     }
   }
 }
@@ -60,7 +60,8 @@ export const cache = {
   },
 
   async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
-    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    const serialized =
+      typeof value === "string" ? value : JSON.stringify(value);
     if (ttlSeconds) {
       await redis.setex(key, ttlSeconds, serialized);
     } else {

@@ -149,23 +149,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
+                Image.asset(
+                  'assets/images/vanix_logo.png',
                   width: 30,
                   height: 30,
-                  decoration: BoxDecoration(
-                    color: VanixColors.vanixRed,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'V',
-                      style: GoogleFonts.orbitron(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
                 ),
                 const SizedBox(width: 8),
                 Text('VANIX',

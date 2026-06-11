@@ -1,33 +1,36 @@
-import express, { Express } from 'express';
-import cors from 'cors';
-import compression from 'compression';
-import cookieParser from 'cookie-parser';
-import morgan from 'morgan';
-import { env } from '@config/env';
-import { apiRateLimiter } from '@middleware/rateLimiter.middleware';
+import express, { Express } from "express";
+import cors from "cors";
+import compression from "compression";
+import cookieParser from "cookie-parser";
+import morgan from "morgan";
+import { env } from "@config/env";
+import { apiRateLimiter } from "@middleware/rateLimiter.middleware";
 import {
   securityHeaders,
   parameterPollutionProtection,
   xssSanitizer,
   requestId,
-} from '@middleware/security.middleware';
-import { errorHandler, notFoundHandler } from '@middleware/errorHandler.middleware';
-import { morganStream } from '@utils/logger';
+} from "@middleware/security.middleware";
+import {
+  errorHandler,
+  notFoundHandler,
+} from "@middleware/errorHandler.middleware";
+import { morganStream } from "@utils/logger";
 
 // Import route modules
-import authRoutes from '@modules/auth/auth.routes';
-import userRoutes from '@modules/users/users.routes';
-import profileRoutes from '@modules/profiles/profiles.routes';
-import contentRoutes from '@modules/content/content.routes';
-import streamingRoutes from '@modules/streaming/streaming.routes';
-import engagementRoutes from '@modules/engagement/engagement.routes';
-import searchRoutes from '@modules/search/search.routes';
-import recommendationRoutes from '@modules/recommendations/recommendations.routes';
-import subscriptionRoutes from '@modules/subscriptions/subscriptions.routes';
-import paymentRoutes from '@modules/payments/payments.routes';
-import notificationRoutes from '@modules/notifications/notifications.routes';
-import analyticsRoutes from '@modules/analytics/analytics.routes';
-import adminRoutes from '@modules/admin/admin.routes';
+import authRoutes from "@modules/auth/auth.routes";
+import userRoutes from "@modules/users/users.routes";
+import profileRoutes from "@modules/profiles/profiles.routes";
+import contentRoutes from "@modules/content/content.routes";
+import streamingRoutes from "@modules/streaming/streaming.routes";
+import engagementRoutes from "@modules/engagement/engagement.routes";
+import searchRoutes from "@modules/search/search.routes";
+import recommendationRoutes from "@modules/recommendations/recommendations.routes";
+import subscriptionRoutes from "@modules/subscriptions/subscriptions.routes";
+import paymentRoutes from "@modules/payments/payments.routes";
+import notificationRoutes from "@modules/notifications/notifications.routes";
+import analyticsRoutes from "@modules/analytics/analytics.routes";
+import adminRoutes from "@modules/admin/admin.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -45,18 +48,18 @@ export function createApp(): Express {
   // CORS
   app.use(
     cors({
-      origin: env.CORS_ORIGINS.split(',').map((o) => o.trim()),
+      origin: env.CORS_ORIGINS.split(",").map((o) => o.trim()),
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
-      exposedHeaders: ['X-Request-Id'],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
+      exposedHeaders: ["X-Request-Id"],
       maxAge: 86400,
     }),
   );
 
   // Body parsing
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "10mb" }));
   app.use(cookieParser());
 
   // Compression
@@ -64,7 +67,7 @@ export function createApp(): Express {
 
   // HTTP request logging
   app.use(
-    morgan(':method :url :status :res[content-length] - :response-time ms', {
+    morgan(":method :url :status :res[content-length] - :response-time ms", {
       stream: morganStream,
     }),
   );
@@ -80,11 +83,11 @@ export function createApp(): Express {
   // HEALTH CHECK
   // ============================================================
 
-  app.get('/health', (_req, res) => {
+  app.get("/health", (_req, res) => {
     res.status(200).json({
       success: true,
-      message: 'VANIX API is running',
-      version: '1.0.0',
+      message: "VANIX API is running",
+      version: "1.0.0",
       timestamp: new Date().toISOString(),
       environment: env.NODE_ENV,
     });

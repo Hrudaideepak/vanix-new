@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import { authenticate } from '@middleware/auth.middleware';
-import { ApiResponse } from '@utils/apiResponse';
-import { prisma } from '@config/database';
-import { AuthRequest } from '@custom-types/index';
-import { parsePagination, toPrismaQuery } from '@utils/pagination';
+import { Router } from "express";
+import { authenticate } from "@middleware/auth.middleware";
+import { ApiResponse } from "@utils/apiResponse";
+import { prisma } from "@config/database";
+import { AuthRequest } from "@custom-types/index";
+import { parsePagination, toPrismaQuery } from "@utils/pagination";
 
 const router = Router();
 
@@ -11,10 +11,10 @@ const router = Router();
 // WATCHLIST
 // ============================================================
 
-router.get('/watchlist', authenticate, async (req: AuthRequest, res, next) => {
+router.get("/watchlist", authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { profileId } = req.query;
-    const pagination = parsePagination(req, { sortBy: 'addedAt' });
+    const pagination = parsePagination(req, { sortBy: "addedAt" });
 
     const where: any = { userId: req.user!.id };
     if (profileId) where.profileId = profileId;
@@ -24,8 +24,26 @@ router.get('/watchlist', authenticate, async (req: AuthRequest, res, next) => {
         where,
         ...toPrismaQuery(pagination),
         include: {
-          movie: { select: { id: true, title: true, posterUrl: true, slug: true, runtime: true, avgRating: true } },
-          series: { select: { id: true, title: true, posterUrl: true, slug: true, totalSeasons: true, avgRating: true } },
+          movie: {
+            select: {
+              id: true,
+              title: true,
+              posterUrl: true,
+              slug: true,
+              runtime: true,
+              avgRating: true,
+            },
+          },
+          series: {
+            select: {
+              id: true,
+              title: true,
+              posterUrl: true,
+              slug: true,
+              totalSeasons: true,
+              avgRating: true,
+            },
+          },
         },
       }),
       prisma.watchlist.count({ where }),
@@ -37,7 +55,7 @@ router.get('/watchlist', authenticate, async (req: AuthRequest, res, next) => {
   }
 });
 
-router.post('/watchlist', authenticate, async (req: AuthRequest, res, next) => {
+router.post("/watchlist", authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { movieId, seriesId, profileId } = req.body;
     const item = await prisma.watchlist.create({
@@ -49,62 +67,94 @@ router.post('/watchlist', authenticate, async (req: AuthRequest, res, next) => {
       },
     });
 
-    ApiResponse.created(res, item, 'Added to watchlist');
+    ApiResponse.created(res, item, "Added to watchlist");
   } catch (error) {
     next(error);
   }
 });
 
-router.delete('/watchlist/:id', authenticate, async (req: AuthRequest, res, next) => {
-  try {
-    await prisma.watchlist.delete({
-      where: { id: req.params.id as string, userId: req.user!.id },
-    });
+router.delete(
+  "/watchlist/:id",
+  authenticate,
+  async (req: AuthRequest, res, next) => {
+    try {
+      await prisma.watchlist.delete({
+        where: { id: req.params.id as string, userId: req.user!.id },
+      });
 
-    ApiResponse.success({ res, message: 'Removed from watchlist' });
-  } catch (error) {
-    next(error);
-  }
-});
+      ApiResponse.success({ res, message: "Removed from watchlist" });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // ============================================================
 // CONTINUE WATCHING
 // ============================================================
 
-router.get('/continue-watching', authenticate, async (req: AuthRequest, res, next) => {
-  try {
-    const { profileId } = req.query;
-    const where: any = { userId: req.user!.id, progressPercent: { lt: 95 } };
-    if (profileId) where.profileId = profileId;
+router.get(
+  "/continue-watching",
+  authenticate,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { profileId } = req.query;
+      const where: any = { userId: req.user!.id, progressPercent: { lt: 95 } };
+      if (profileId) where.profileId = profileId;
 
-    const items = await prisma.continueWatching.findMany({
-      where,
-      orderBy: { updatedAt: 'desc' },
-      take: 20,
-      include: {
-        movie: { select: { id: true, title: true, posterUrl: true, slug: true, runtime: true } },
-        episode: {
-          select: {
-            id: true, title: true, thumbnailUrl: true, episodeNumber: true, runtime: true,
-            season: { select: { seasonNumber: true, series: { select: { id: true, title: true, posterUrl: true, slug: true } } } },
+      const items = await prisma.continueWatching.findMany({
+        where,
+        orderBy: { updatedAt: "desc" },
+        take: 20,
+        include: {
+          movie: {
+            select: {
+              id: true,
+              title: true,
+              posterUrl: true,
+              slug: true,
+              runtime: true,
+            },
+          },
+          episode: {
+            select: {
+              id: true,
+              title: true,
+              thumbnailUrl: true,
+              episodeNumber: true,
+              runtime: true,
+              season: {
+                select: {
+                  seasonNumber: true,
+                  series: {
+                    select: {
+                      id: true,
+                      title: true,
+                      posterUrl: true,
+                      slug: true,
+                    },
+                  },
+                },
+              },
+            },
           },
         },
-      },
-    });
+      });
 
-    ApiResponse.success({ res, data: items });
-  } catch (error) {
-    next(error);
-  }
-});
+      ApiResponse.success({ res, data: items });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // ============================================================
 // WATCH HISTORY
 // ============================================================
 
-router.get('/history', authenticate, async (req: AuthRequest, res, next) => {
+router.get("/history", authenticate, async (req: AuthRequest, res, next) => {
   try {
-    const pagination = parsePagination(req, { sortBy: 'watchedAt' });
+    const pagination = parsePagination(req, { sortBy: "watchedAt" });
     const { profileId } = req.query;
 
     const where: any = { userId: req.user!.id };
@@ -115,11 +165,21 @@ router.get('/history', authenticate, async (req: AuthRequest, res, next) => {
         where,
         ...toPrismaQuery(pagination),
         include: {
-          movie: { select: { id: true, title: true, posterUrl: true, slug: true } },
+          movie: {
+            select: { id: true, title: true, posterUrl: true, slug: true },
+          },
           episode: {
             select: {
-              id: true, title: true, thumbnailUrl: true, episodeNumber: true,
-              season: { select: { seasonNumber: true, series: { select: { title: true, slug: true } } } },
+              id: true,
+              title: true,
+              thumbnailUrl: true,
+              episodeNumber: true,
+              season: {
+                select: {
+                  seasonNumber: true,
+                  series: { select: { title: true, slug: true } },
+                },
+              },
             },
           },
         },
@@ -137,7 +197,7 @@ router.get('/history', authenticate, async (req: AuthRequest, res, next) => {
 // REVIEWS
 // ============================================================
 
-router.post('/reviews', authenticate, async (req: AuthRequest, res, next) => {
+router.post("/reviews", authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { movieId, seriesId, content, isSpoiler } = req.body;
     const review = await prisma.review.create({
@@ -150,32 +210,40 @@ router.post('/reviews', authenticate, async (req: AuthRequest, res, next) => {
       },
     });
 
-    ApiResponse.created(res, review, 'Review submitted');
+    ApiResponse.created(res, review, "Review submitted");
   } catch (error) {
     next(error);
   }
 });
 
-router.get('/reviews/:contentId', async (req, res, next) => {
+router.get("/reviews/:contentId", async (req, res, next) => {
   try {
     const { contentId } = req.params;
-    const { type = 'movie' } = req.query;
+    const { type = "movie" } = req.query;
     const pagination = parsePagination(req);
 
     const where: any = { isApproved: true };
-    if (type === 'movie') where.movieId = contentId;
+    if (type === "movie") where.movieId = contentId;
     else where.seriesId = contentId;
 
     const [reviews, total] = await Promise.all([
       prisma.review.findMany({
         where,
         ...toPrismaQuery(pagination),
-        include: { user: { select: { id: true, name: true, avatarUrl: true } } },
+        include: {
+          user: { select: { id: true, name: true, avatarUrl: true } },
+        },
       }),
       prisma.review.count({ where }),
     ]);
 
-    ApiResponse.paginated(res, reviews, total, pagination.page, pagination.limit);
+    ApiResponse.paginated(
+      res,
+      reviews,
+      total,
+      pagination.page,
+      pagination.limit,
+    );
   } catch (error) {
     next(error);
   }
@@ -185,7 +253,7 @@ router.get('/reviews/:contentId', async (req, res, next) => {
 // RATINGS
 // ============================================================
 
-router.post('/ratings', authenticate, async (req: AuthRequest, res, next) => {
+router.post("/ratings", authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { movieId, seriesId, score } = req.body;
 
@@ -217,7 +285,7 @@ router.post('/ratings', authenticate, async (req: AuthRequest, res, next) => {
       });
     }
 
-    ApiResponse.success({ res, message: 'Rating submitted', data: rating });
+    ApiResponse.success({ res, message: "Rating submitted", data: rating });
   } catch (error) {
     next(error);
   }

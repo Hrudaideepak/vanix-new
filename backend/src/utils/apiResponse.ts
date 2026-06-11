@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Response } from "express";
 
 interface ApiResponseOptions<T> {
   res: Response;
@@ -18,7 +18,7 @@ interface ApiResponseOptions<T> {
 
 export class ApiResponse {
   static success<T>(options: ApiResponseOptions<T>): Response {
-    const { res, statusCode = 200, message = 'Success', data, meta } = options;
+    const { res, statusCode = 200, message = "Success", data, meta } = options;
 
     const response: Record<string, unknown> = {
       success: true,
@@ -36,7 +36,11 @@ export class ApiResponse {
     return res.status(statusCode).json(response);
   }
 
-  static created<T>(res: Response, data: T, message = 'Created successfully'): Response {
+  static created<T>(
+    res: Response,
+    data: T,
+    message = "Created successfully",
+  ): Response {
     return ApiResponse.success({ res, statusCode: 201, message, data });
   }
 
@@ -68,7 +72,7 @@ export class ApiResponse {
     total: number,
     page: number,
     limit: number,
-    message = 'Success',
+    message = "Success",
   ): Response {
     const totalPages = Math.ceil(total / limit);
 

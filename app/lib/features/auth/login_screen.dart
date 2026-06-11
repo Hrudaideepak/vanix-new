@@ -295,30 +295,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
+              Image.asset(
+                'assets/images/vanix_logo.png',
                 width: 54,
                 height: 54,
-                decoration: BoxDecoration(
-                  color: VanixColors.vanixRed,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: VanixColors.vanixRed.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    'V',
-                    style: GoogleFonts.orbitron(
-                      color: Colors.white,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
               ),
               const SizedBox(width: 14),
               Text(

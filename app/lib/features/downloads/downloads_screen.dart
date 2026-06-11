@@ -1,58 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/vanix_colors.dart';
 import '../../core/widgets/vanix_button.dart';
+import '../../core/models/models.dart';
+import 'providers/download_provider.dart';
 
-class DownloadsScreen extends StatefulWidget {
+class DownloadsScreen extends ConsumerStatefulWidget {
   const DownloadsScreen({super.key});
 
   @override
-  State<DownloadsScreen> createState() => _DownloadsScreenState();
+  ConsumerState<DownloadsScreen> createState() => _DownloadsScreenState();
 }
 
-class _DownloadsScreenState extends State<DownloadsScreen> {
+class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
   bool _smartDownloads = true;
 
-  // Mock list of downloads
-  final List<Map<String, dynamic>> _downloads = [
-    {
-      'id': 'cyberpunk_nights_s2e5',
-      'title': 'Cyberpunk Nights',
-      'subtitle': 'S2 E5 • The Memory Trader',
-      'size': '420 MB',
-      'quality': '1080p',
-      'progress': 1.0,
-      'isCompleted': true,
-      'thumbnail': 'https://images.unsplash.com/photo-1542204172-e7052809564d?w=200',
-    },
-    {
-      'id': 'shadow_realm_s1e8',
-      'title': 'Shadow Realm',
-      'subtitle': 'S1 E8 • Fire and Iron',
-      'size': '310 MB',
-      'quality': '1080p',
-      'progress': 1.0,
-      'isCompleted': true,
-      'thumbnail': 'https://images.unsplash.com/photo-1578894381163-e72c17f2d45f?w=200',
-    },
-    {
-      'id': 'neon_genesis',
-      'title': 'Neon Genesis',
-      'subtitle': 'Movie (2024)',
-      'size': '1.2 GB',
-      'quality': '4K UHD',
-      'progress': 0.45,
-      'isCompleted': false,
-      'thumbnail': 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=200',
-    },
-  ];
-
-  void _removeDownload(int index) {
-    final title = _downloads[index]['title'];
-    setState(() {
-      _downloads.removeAt(index);
-    });
+  void _removeDownload(String id, String title) {
+    ref.read(downloadProvider.notifier).removeDownload(id);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Deleted download: $title'),
@@ -61,10 +27,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     );
   }
 
-  void _removeAllDownloads() {
-    setState(() {
-      _downloads.clear();
-    });
+  void _removeAllDownloads(List<DownloadItem> downloads) {
+    for (final item in downloads) {
+      ref.read(downloadProvider.notifier).removeDownload(item.id);
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Cleared all downloads')),
     );
@@ -72,16 +38,29 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final downloads = ref.watch(downloadProvider);
+
     return Scaffold(
       backgroundColor: VanixColors.bgPrimary,
       appBar: AppBar(
-        title: Text(
-          'OFFLINE DOWNLOADS',
-          style: GoogleFonts.orbitron(letterSpacing: 1.5, fontWeight: FontWeight.w800, fontSize: 16),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/vanix_logo.png',
+              width: 24,
+              height: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'OFFLINE DOWNLOADS',
+              style: GoogleFonts.orbitron(letterSpacing: 1.5, fontWeight: FontWeight.w800, fontSize: 16),
+            ),
+          ],
         ),
         centerTitle: true,
         actions: [
-          if (_downloads.isNotEmpty)
+          if (downloads.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_sweep_outlined, color: Colors.white70),
               onPressed: () {
@@ -109,7 +88,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                       ElevatedButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          _removeAllDownloads();
+                          _removeAllDownloads(downloads);
                         },
                         style: ElevatedButton.styleFrom(backgroundColor: VanixColors.vanixRed),
                         child: const Text('Delete All'),
@@ -121,7 +100,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
             ),
         ],
       ),
-      body: _downloads.isEmpty ? _buildEmptyState() : _buildDownloadsList(),
+      body: downloads.isEmpty ? _buildEmptyState() : _buildDownloadsList(downloads),
     );
   }
 
@@ -175,7 +154,18 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     );
   }
 
-  Widget _buildDownloadsList() {
+  Widget _buildDownloadsList(List<DownloadItem> downloads) {
+    // Calculate total downloaded size if possible
+    double totalSizeMb = 0;
+    for (final item in downloads) {
+      if (item.fileSizeBytes != null) {
+        totalSizeMb += item.fileSizeBytes! / (1024 * 1024);
+      }
+    }
+    final String sizeText = totalSizeMb > 1024 
+        ? '${(totalSizeMb / 1024).toStringAsFixed(1)} GB'
+        : '${totalSizeMb.toStringAsFixed(0)} MB';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -229,7 +219,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     style: GoogleFonts.montserrat(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   Text(
-                    '1.9 GB used of 64 GB • 18.2 GB free',
+                    '$sizeText used • Offline Library',
                     style: GoogleFonts.poppins(fontSize: 10, color: VanixColors.textSecondary),
                   ),
                 ],
@@ -238,7 +228,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: 0.12, // 12% space occupied
+                  value: (totalSizeMb / 1024) / 64, // out of 64 GB
                   minHeight: 6,
                   color: VanixColors.vanixRed,
                   backgroundColor: VanixColors.bgTertiary,
@@ -255,12 +245,14 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             physics: const BouncingScrollPhysics(),
-            itemCount: _downloads.length,
+            itemCount: downloads.length,
             separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
-              final item = _downloads[index];
-              final isCompleted = item['isCompleted'] as bool;
-              final double progress = item['progress'] as double;
+              final item = downloads[index];
+              final isCompleted = item.status == 'COMPLETED';
+              final isPaused = item.status == 'PAUSED';
+              final isFailed = item.status == 'FAILED';
+              final double progress = item.progress;
 
               return Container(
                 decoration: BoxDecoration(
@@ -275,7 +267,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     GestureDetector(
                       onTap: () {
                         if (isCompleted) {
-                          context.push('/player/${item['id']}');
+                          context.push('/player/${item.id}');
                         }
                       },
                       child: Stack(
@@ -286,11 +278,16 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                             decoration: BoxDecoration(
                               color: VanixColors.bgSecondary,
                               borderRadius: BorderRadius.circular(6),
-                              image: DecorationImage(
-                                image: NetworkImage(item['thumbnail']!),
-                                fit: BoxFit.cover,
-                              ),
+                              image: item.thumbnailUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(item.thumbnailUrl!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
                             ),
+                            child: item.thumbnailUrl == null
+                                ? const Center(child: Icon(Icons.movie, color: Colors.white38))
+                                : null,
                           ),
                           if (isCompleted)
                             Positioned.fill(
@@ -319,7 +316,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  item['title']!,
+                                  item.title,
                                   style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -333,15 +330,18 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                                   border: Border.all(color: VanixColors.borderColor),
                                 ),
                                 child: Text(
-                                  item['quality']!,
+                                  item.quality,
                                   style: GoogleFonts.orbitron(fontSize: 7, fontWeight: FontWeight.bold, color: Colors.white70),
                                 ),
                               ),
                             ],
                           ),
                           Text(
-                            item['subtitle']!,
-                            style: GoogleFonts.poppins(fontSize: 11, color: Colors.white70),
+                            isCompleted ? 'Offline Available' : (isPaused ? 'Paused' : (isFailed ? 'Download Failed' : 'Downloading...')),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11, 
+                              color: isFailed ? VanixColors.vanixRed : VanixColors.textSecondary,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -352,8 +352,12 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Downloading...',
-                                  style: GoogleFonts.poppins(fontSize: 10, color: VanixColors.vanixRed, fontWeight: FontWeight.bold),
+                                  isPaused ? 'Paused' : 'Downloading...',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10, 
+                                    color: isPaused ? Colors.white60 : VanixColors.vanixRed, 
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 Text(
                                   '${(progress * 100).toStringAsFixed(0)}%',
@@ -373,7 +377,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                             ),
                           ] else ...[
                             Text(
-                              item['size']!,
+                              item.fileSizeFormatted,
                               style: GoogleFonts.poppins(fontSize: 10, color: VanixColors.textMuted),
                             ),
                           ]
@@ -382,10 +386,33 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                     ),
                     const SizedBox(width: 8),
 
-                    // Actions (Delete option)
+                    // Actions (Pause/Resume/Retry and Delete options)
+                    if (!isCompleted) ...[
+                      if (isPaused)
+                        IconButton(
+                          icon: const Icon(Icons.play_arrow_outlined, color: Colors.white60, size: 20),
+                          onPressed: () => ref.read(downloadProvider.notifier).resumeDownload(item.id),
+                        )
+                      else if (isFailed)
+                        IconButton(
+                          icon: const Icon(Icons.refresh_outlined, color: Colors.white60, size: 20),
+                          onPressed: () => ref.read(downloadProvider.notifier).startDownload(
+                                id: item.id,
+                                title: item.title,
+                                thumbnailUrl: item.thumbnailUrl,
+                                videoUrl: item.videoUrl,
+                                quality: item.quality,
+                              ),
+                        )
+                      else
+                        IconButton(
+                          icon: const Icon(Icons.pause_outlined, color: Colors.white60, size: 20),
+                          onPressed: () => ref.read(downloadProvider.notifier).pauseDownload(item.id),
+                        ),
+                    ],
                     IconButton(
                       icon: const Icon(Icons.cancel_outlined, color: Colors.white60, size: 20),
-                      onPressed: () => _removeDownload(index),
+                      onPressed: () => _removeDownload(item.id, item.title),
                     ),
                   ],
                 ),

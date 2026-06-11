@@ -140,20 +140,31 @@ class _ProfileSelectScreenState extends ConsumerState<ProfileSelectScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Glowing VANIX text logo at top
-                Text(
-                  'VANIX',
-                  style: GoogleFonts.orbitron(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 8,
-                    shadows: [
-                      Shadow(
-                        color: VanixColors.vanixRed.withOpacity(0.5),
-                        blurRadius: 15,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/images/vanix_logo.png',
+                      width: 30,
+                      height: 30,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'VANIX',
+                      style: GoogleFonts.orbitron(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 8,
+                        shadows: [
+                          Shadow(
+                            color: VanixColors.vanixRed.withOpacity(0.5),
+                            blurRadius: 15,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 60),
 

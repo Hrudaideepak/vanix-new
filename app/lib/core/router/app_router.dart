@@ -11,6 +11,7 @@ import '../../features/profile/profile_select_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/downloads/downloads_screen.dart';
 import '../../features/player/video_player_screen.dart';
+import '../../features/splash/splash_screen.dart';
 import '../providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
 import '../theme/vanix_colors.dart';
@@ -28,12 +29,17 @@ final routerNotifierProvider = Provider((ref) => RouterNotifier(ref));
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/splash',
     refreshListenable: ref.watch(routerNotifierProvider),
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final status = authState.status;
       final loggingIn = state.matchedLocation == '/login';
+      final isSplash = state.matchedLocation == '/splash';
+
+      if (isSplash) {
+        return null;
+      }
 
       if (status == AuthStatus.unknown || status == AuthStatus.loading) {
         return null;
@@ -91,6 +97,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // Full-screen routes (no bottom nav)
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),

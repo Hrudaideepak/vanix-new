@@ -1,15 +1,15 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { env } from '@config/env';
-import { prisma } from '@config/database';
-import { redis } from '@config/redis';
-import { UnauthorizedError, ForbiddenError } from '@utils/errors';
-import { AuthRequest } from '@custom-types/index';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { env } from "@config/env";
+import { prisma } from "@config/database";
+import { redis } from "@config/redis";
+import { UnauthorizedError, ForbiddenError } from "@utils/errors";
+import { AuthRequest } from "@custom-types/index";
 
 interface JwtPayload {
   userId: string;
   sessionId: string;
-  type: 'access' | 'refresh';
+  type: "access" | "refresh";
   iat: number;
   exp: number;
 }
@@ -24,25 +24,25 @@ export const authenticate = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedError('No token provided');
+    if (!authHeader?.startsWith("Bearer ")) {
+      throw new UnauthorizedError("No token provided");
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(" ")[1];
     if (!token) {
-      throw new UnauthorizedError('No token provided');
+      throw new UnauthorizedError("No token provided");
     }
 
     // Check if token is blacklisted
     const isBlacklisted = await redis.get(`bl:${token}`);
     if (isBlacklisted) {
-      throw new UnauthorizedError('Token has been revoked');
+      throw new UnauthorizedError("Token has been revoked");
     }
 
     // Verify JWT
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload;
-    if (decoded.type !== 'access') {
-      throw new UnauthorizedError('Invalid token type');
+    if (decoded.type !== "access") {
+      throw new UnauthorizedError("Invalid token type");
     }
 
     // Check session is still active
@@ -51,7 +51,7 @@ export const authenticate = async (
     });
 
     if (!session || !session.isActive) {
-      throw new UnauthorizedError('Session expired or revoked');
+      throw new UnauthorizedError("Session expired or revoked");
     }
 
     // Get user
@@ -68,11 +68,11 @@ export const authenticate = async (
     });
 
     if (!user) {
-      throw new UnauthorizedError('User not found');
+      throw new UnauthorizedError("User not found");
     }
 
     if (!user.isActive || user.isBanned) {
-      throw new ForbiddenError('Account is suspended or banned');
+      throw new ForbiddenError("Account is suspended or banned");
     }
 
     req.user = user;
@@ -82,9 +82,9 @@ export const authenticate = async (
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      next(new UnauthorizedError('Token expired'));
+      next(new UnauthorizedError("Token expired"));
     } else if (error instanceof jwt.JsonWebTokenError) {
-      next(new UnauthorizedError('Invalid token'));
+      next(new UnauthorizedError("Invalid token"));
     } else {
       next(error);
     }
@@ -101,11 +101,11 @@ export const optionalAuth = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return next();
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(" ")[1];
     if (!token) {
       return next();
     }
@@ -145,13 +145,13 @@ export const authenticateAdmin = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedError('No token provided');
+    if (!authHeader?.startsWith("Bearer ")) {
+      throw new UnauthorizedError("No token provided");
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(" ")[1];
     if (!token) {
-      throw new UnauthorizedError('No token provided');
+      throw new UnauthorizedError("No token provided");
     }
 
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload & {
@@ -175,7 +175,7 @@ export const authenticateAdmin = async (
     });
 
     if (!admin || !admin.isActive) {
-      throw new UnauthorizedError('Admin account not found or inactive');
+      throw new UnauthorizedError("Admin account not found or inactive");
     }
 
     req.admin = {
@@ -191,9 +191,9 @@ export const authenticateAdmin = async (
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      next(new UnauthorizedError('Token expired'));
+      next(new UnauthorizedError("Token expired"));
     } else if (error instanceof jwt.JsonWebTokenError) {
-      next(new UnauthorizedError('Invalid token'));
+      next(new UnauthorizedError("Invalid token"));
     } else {
       next(error);
     }
@@ -205,13 +205,13 @@ export const authenticateAdmin = async (
  */
 export function generateTokens(userId: string, sessionId: string) {
   const accessToken = jwt.sign(
-    { userId, sessionId, type: 'access' },
+    { userId, sessionId, type: "access" },
     env.JWT_ACCESS_SECRET,
     { expiresIn: env.JWT_ACCESS_EXPIRY as any },
   );
 
   const refreshToken = jwt.sign(
-    { userId, sessionId, type: 'refresh' },
+    { userId, sessionId, type: "refresh" },
     env.JWT_REFRESH_SECRET,
     { expiresIn: env.JWT_REFRESH_EXPIRY as any },
   );
@@ -223,16 +223,17 @@ export function generateTokens(userId: string, sessionId: string) {
  * Generate admin JWT token
  */
 export function generateAdminToken(adminId: string, role: string) {
-  return jwt.sign(
-    { adminId, role, type: 'access' },
-    env.JWT_ACCESS_SECRET,
-    { expiresIn: '8h' },
-  );
+  return jwt.sign({ adminId, role, type: "access" }, env.JWT_ACCESS_SECRET, {
+    expiresIn: "8h",
+  });
 }
 
 /**
  * Blacklist a token (for logout)
  */
-export async function blacklistToken(token: string, expiresInSeconds: number): Promise<void> {
-  await redis.setex(`bl:${token}`, expiresInSeconds, '1');
+export async function blacklistToken(
+  token: string,
+  expiresInSeconds: number,
+): Promise<void> {
+  await redis.setex(`bl:${token}`, expiresInSeconds, "1");
 }

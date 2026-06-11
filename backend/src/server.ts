@@ -1,8 +1,10 @@
-import { createApp } from './app';
-import { env } from '@config/env';
-import { connectDatabase, disconnectDatabase } from '@config/database';
-import { redis } from '@config/redis';
-import { logger } from '@utils/logger';
+import { createApp } from "./app";
+import { env } from "@config/env";
+import { connectDatabase, disconnectDatabase } from "@config/database";
+import { redis } from "@config/redis";
+import { logger } from "@utils/logger";
+import { startVideoWorker } from "./workers/videoWorker";
+import { syncContentToMeilisearch } from "./utils/searchSync";
 
 async function bootstrap(): Promise<void> {
   try {
@@ -11,6 +13,14 @@ async function bootstrap(): Promise<void> {
 
     // Connect to Redis
     await redis.connect();
+
+    // Start video transcoding background worker
+    startVideoWorker();
+
+    // Run Meilisearch sync in background
+    syncContentToMeilisearch().catch((err) => {
+      logger.error("Failed to sync content to Meilisearch on startup:", err);
+    });
 
     // Create Express app
     const app = createApp();
@@ -36,41 +46,41 @@ async function bootstrap(): Promise<void> {
       logger.info(`${signal} received. Starting graceful shutdown...`);
 
       server.close(async () => {
-        logger.info('HTTP server closed');
+        logger.info("HTTP server closed");
 
         // Close database connection
         await disconnectDatabase();
 
         // Close Redis connection
         await redis.quit();
-        logger.info('Redis connection closed');
+        logger.info("Redis connection closed");
 
-        logger.info('Graceful shutdown complete');
+        logger.info("Graceful shutdown complete");
         process.exit(0);
       });
 
       // Force shutdown after 30 seconds
       setTimeout(() => {
-        logger.error('Forced shutdown due to timeout');
+        logger.error("Forced shutdown due to timeout");
         process.exit(1);
       }, 30000);
     };
 
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+    process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
     // Unhandled rejection handler
-    process.on('unhandledRejection', (reason: unknown) => {
-      logger.error('Unhandled Rejection:', reason);
+    process.on("unhandledRejection", (reason: unknown) => {
+      logger.error("Unhandled Rejection:", reason);
     });
 
     // Uncaught exception handler
-    process.on('uncaughtException', (error: Error) => {
-      logger.error('Uncaught Exception:', error);
+    process.on("uncaughtException", (error: Error) => {
+      logger.error("Uncaught Exception:", error);
       process.exit(1);
     });
   } catch (error) {
-    logger.error('❌ Failed to start server:', error);
+    logger.error("❌ Failed to start server:", error);
     process.exit(1);
   }
 }

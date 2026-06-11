@@ -1,19 +1,24 @@
-import { prisma } from '@config/database';
-import { cache } from '@config/redis';
-import { env } from '@config/env';
-import { generateTokens, blacklistToken } from '@middleware/auth.middleware';
-import { BadRequestError, UnauthorizedError, ConflictError } from '@utils/errors';
-import { logger } from '@utils/logger';
-import jwt from 'jsonwebtoken';
-import { OAuth2Client } from 'google-auth-library';
-import { DeviceType } from '@prisma/client';
+import { prisma } from "@config/database";
+import { cache } from "@config/redis";
+import { env } from "@config/env";
+import { generateTokens, blacklistToken } from "@middleware/auth.middleware";
+import {
+  BadRequestError,
+  UnauthorizedError,
+  ConflictError,
+} from "@utils/errors";
+import { logger } from "@utils/logger";
+import jwt from "jsonwebtoken";
+import { sendSMS, sendEmail } from "@utils/notificationHelpers";
+import { OAuth2Client } from "google-auth-library";
+import { DeviceType } from "@prisma/client";
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 interface SendOtpInput {
   phone?: string;
   email?: string;
-  type: 'sms' | 'email';
+  type: "sms" | "email";
 }
 
 interface VerifyOtpInput {
@@ -47,21 +52,25 @@ export class AuthService {
   async sendOtp(input: SendOtpInput): Promise<void> {
     const identifier = input.phone || input.email;
     if (!identifier) {
-      throw new BadRequestError('Phone or email is required');
+      throw new BadRequestError("Phone or email is required");
     }
 
     // Check rate limit in Redis
     const rateLimitKey = `otp_rate:${identifier}`;
     const attempts = await cache.get<number>(rateLimitKey);
     if (attempts && attempts >= env.OTP_MAX_ATTEMPTS) {
-      throw new BadRequestError('Too many OTP requests. Please try again later.');
+      throw new BadRequestError(
+        "Too many OTP requests. Please try again later.",
+      );
     }
 
     // Check cooldown
     const cooldownKey = `otp_cooldown:${identifier}`;
     const hasCooldown = await cache.exists(cooldownKey);
     if (hasCooldown) {
-      throw new BadRequestError(`Please wait ${env.OTP_RESEND_COOLDOWN_SECONDS} seconds before requesting a new OTP.`);
+      throw new BadRequestError(
+        `Please wait ${env.OTP_RESEND_COOLDOWN_SECONDS} seconds before requesting a new OTP.`,
+      );
     }
 
     // Generate 6-digit OTP
@@ -72,18 +81,22 @@ export class AuthService {
     await cache.set(otpKey, otp, env.OTP_EXPIRY_MINUTES * 60);
 
     // Set cooldown
-    await cache.set(cooldownKey, '1', env.OTP_RESEND_COOLDOWN_SECONDS);
+    await cache.set(cooldownKey, "1", env.OTP_RESEND_COOLDOWN_SECONDS);
 
     // Increment rate limit
     await cache.incr(rateLimitKey);
     await cache.expire(rateLimitKey, 3600); // 1 hour window
 
     // Send OTP via SMS or Email
-    if (input.type === 'sms' && input.phone) {
-      // TODO: Integrate SMS provider (MSG91/Twilio)
+    if (input.type === "sms" && input.phone) {
+      await sendSMS(input.phone, otp);
       logger.info(`📱 OTP for ${input.phone}: ${otp}`);
-    } else if (input.type === 'email' && input.email) {
-      // TODO: Integrate email provider (Nodemailer/SendGrid)
+    } else if (input.type === "email" && input.email) {
+      await sendEmail(
+        input.email,
+        "VANIX Verification OTP",
+        `<p>Your verification OTP for VANIX is: <strong>${otp}</strong>. It will expire in ${env.OTP_EXPIRY_MINUTES} minutes.</p>`,
+      );
       logger.info(`📧 OTP for ${input.email}: ${otp}`);
     }
   }
@@ -94,7 +107,7 @@ export class AuthService {
   async verifyOtp(input: VerifyOtpInput) {
     const identifier = input.phone || input.email;
     if (!identifier) {
-      throw new BadRequestError('Phone or email is required');
+      throw new BadRequestError("Phone or email is required");
     }
 
     // Get stored OTP
@@ -102,11 +115,13 @@ export class AuthService {
     const storedOtp = await cache.get<string>(otpKey);
 
     if (!storedOtp) {
-      throw new BadRequestError('OTP expired or not found. Please request a new one.');
+      throw new BadRequestError(
+        "OTP expired or not found. Please request a new one.",
+      );
     }
 
     if (storedOtp !== input.otp) {
-      throw new BadRequestError('Invalid OTP');
+      throw new BadRequestError("Invalid OTP");
     }
 
     // Clear OTP
@@ -126,7 +141,7 @@ export class AuthService {
           // Create default profile
           profiles: {
             create: {
-              name: input.phone || input.email || 'User',
+              name: input.phone || input.email || "User",
               avatarUrl: null,
             },
           },
@@ -181,16 +196,13 @@ export class AuthService {
 
     const payload = ticket.getPayload();
     if (!payload || !payload.email) {
-      throw new UnauthorizedError('Invalid Google token');
+      throw new UnauthorizedError("Invalid Google token");
     }
 
     // Find or create user
     let user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { googleId: payload.sub },
-          { email: payload.email },
-        ],
+        OR: [{ googleId: payload.sub }, { email: payload.email }],
       },
     });
 
@@ -260,11 +272,11 @@ export class AuthService {
     try {
       decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET);
     } catch {
-      throw new UnauthorizedError('Invalid or expired refresh token');
+      throw new UnauthorizedError("Invalid or expired refresh token");
     }
 
-    if (decoded.type !== 'refresh') {
-      throw new UnauthorizedError('Invalid token type');
+    if (decoded.type !== "refresh") {
+      throw new UnauthorizedError("Invalid token type");
     }
 
     // Find session
@@ -273,7 +285,7 @@ export class AuthService {
     });
 
     if (!session || !session.isActive) {
-      throw new UnauthorizedError('Session not found or revoked');
+      throw new UnauthorizedError("Session not found or revoked");
     }
 
     // Check expiry
@@ -282,7 +294,7 @@ export class AuthService {
         where: { id: session.id },
         data: { isActive: false },
       });
-      throw new UnauthorizedError('Session expired');
+      throw new UnauthorizedError("Session expired");
     }
 
     // Generate new tokens (rotation)
@@ -300,7 +312,11 @@ export class AuthService {
   /**
    * Logout — invalidate current session
    */
-  async logout(userId: string, sessionId: string, accessToken: string): Promise<void> {
+  async logout(
+    userId: string,
+    sessionId: string,
+    accessToken: string,
+  ): Promise<void> {
     // Deactivate session
     await prisma.session.update({
       where: { id: sessionId },
@@ -324,15 +340,18 @@ export class AuthService {
   /**
    * Helper: Create or update device record
    */
-  private async upsertDevice(userId: string, input: {
-    deviceName: string;
-    deviceType: string;
-    deviceId: string;
-    platform?: string;
-    osVersion?: string;
-    appVersion?: string;
-    fcmToken?: string;
-  }) {
+  private async upsertDevice(
+    userId: string,
+    input: {
+      deviceName: string;
+      deviceType: string;
+      deviceId: string;
+      platform?: string;
+      osVersion?: string;
+      appVersion?: string;
+      fcmToken?: string;
+    },
+  ) {
     return prisma.device.upsert({
       where: {
         userId_deviceId: {
@@ -376,7 +395,7 @@ export class AuthService {
       data: {
         userId,
         deviceId,
-        refreshToken: 'pending', // Will be updated after token generation
+        refreshToken: "pending", // Will be updated after token generation
         ipAddress: null,
         userAgent: null,
         isActive: true,
