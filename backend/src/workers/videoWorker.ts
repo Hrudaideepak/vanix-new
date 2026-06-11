@@ -2,6 +2,7 @@ import { Worker, Job } from "bullmq";
 import { env } from "@config/env";
 import { prisma } from "@config/database";
 import { logger } from "@utils/logger";
+import crypto from "crypto";
 const redisUrl = new URL(env.REDIS_URL);
 const workerConnectionOptions = {
   host: redisUrl.hostname,
@@ -50,6 +51,28 @@ export function startVideoWorker(): Worker {
       const hlsOutput = `${cdnBase}/content/${job.data.contentType}/${job.data.contentId}/manifest.m3u8`;
       const dashOutput = `${cdnBase}/content/${job.data.contentType}/${job.data.contentId}/manifest.mpd`;
       const thumbnailsOutput = `${cdnBase}/content/${job.data.contentType}/${job.data.contentId}/thumbnails.vtt`;
+
+      // 3.5. Generate HLS AES-128 key and IV for segment encryption
+      const key = crypto.randomBytes(16).toString("hex");
+      const iv = crypto.randomBytes(16).toString("hex");
+      await prisma.videoEncryptionKey.upsert({
+        where: {
+          contentType_contentId: {
+            contentType: job.data.contentType,
+            contentId: job.data.contentId,
+          },
+        },
+        create: {
+          contentType: job.data.contentType,
+          contentId: job.data.contentId,
+          key,
+          iv,
+        },
+        update: {
+          key,
+          iv,
+        },
+      });
 
       // 4. Update core content entry with stream link
       if (job.data.contentType === "movie") {

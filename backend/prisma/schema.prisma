@@ -894,3 +894,16 @@ enum VideoJobStatus {
   COMPLETED
   FAILED
 }
+
+model VideoEncryptionKey {
+  id          String   @id @default(uuid())
+  contentType String   @map("content_type") // movie, episode
+  contentId   String   @map("content_id")
+  key         String   // Hex-encoded 16-byte AES key
+  iv          String   // Hex-encoded 16-byte IV
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([contentType, contentId])
+  @@map("video_encryption_keys")
+}
+

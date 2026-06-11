@@ -54,6 +54,61 @@ router.get(
   },
 );
 
+// Get AES-128 decryption key for HLS streaming
+router.get(
+  "/:contentId/key",
+  authenticate,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const contentId = req.params.contentId as string;
+      const { type = "movie" } = req.query;
+
+      // 1. Check if user has an active/trial subscription
+      const subscription = await prisma.subscription.findFirst({
+        where: {
+          userId: req.user!.id,
+          status: { in: ["ACTIVE", "TRIAL"] },
+          currentPeriodEnd: { gte: new Date() },
+        },
+      });
+
+      if (!subscription) {
+        res.status(403).json({
+          success: false,
+          message: "Active subscription required to access content",
+        });
+        return;
+      }
+
+      // 2. Fetch the encryption key from database
+      const encryptionKey = await prisma.videoEncryptionKey.findUnique({
+        where: {
+          contentType_contentId: {
+            contentType: type as string,
+            contentId: contentId,
+          },
+        },
+      });
+
+      if (!encryptionKey) {
+        res.status(404).json({
+          success: false,
+          message: "Decryption key not found for this content",
+        });
+        return;
+      }
+
+      // 3. Return the key as raw binary sequence of 16 octets (bytes)
+      const keyBuffer = Buffer.from(encryptionKey.key, "hex");
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("Cache-Control", "no-store, private");
+      res.status(200).send(keyBuffer);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 // Update watch progress
 router.post(
   "/:contentId/progress",
