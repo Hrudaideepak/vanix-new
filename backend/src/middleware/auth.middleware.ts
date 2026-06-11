@@ -5,6 +5,7 @@ import { prisma } from "@config/database";
 import { redis } from "@config/redis";
 import { UnauthorizedError, ForbiddenError } from "@utils/errors";
 import { AuthRequest } from "@custom-types/index";
+import { jwtPrivateKey, jwtPublicKey } from "@config/keys";
 
 interface JwtPayload {
   userId: string;
@@ -39,8 +40,8 @@ export const authenticate = async (
       throw new UnauthorizedError("Token has been revoked");
     }
 
-    // Verify JWT
-    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload;
+    // Verify JWT using asymmetric RS256 public key
+    const decoded = jwt.verify(token, jwtPublicKey, { algorithms: ["RS256"] }) as JwtPayload;
     if (decoded.type !== "access") {
       throw new UnauthorizedError("Invalid token type");
     }
@@ -110,7 +111,7 @@ export const optionalAuth = async (
       return next();
     }
 
-    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, jwtPublicKey, { algorithms: ["RS256"] }) as JwtPayload;
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {
@@ -154,7 +155,7 @@ export const authenticateAdmin = async (
       throw new UnauthorizedError("No token provided");
     }
 
-    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as JwtPayload & {
+    const decoded = jwt.verify(token, jwtPublicKey, { algorithms: ["RS256"] }) as JwtPayload & {
       adminId: string;
       role: string;
     };
@@ -206,8 +207,8 @@ export const authenticateAdmin = async (
 export function generateTokens(userId: string, sessionId: string) {
   const accessToken = jwt.sign(
     { userId, sessionId, type: "access" },
-    env.JWT_ACCESS_SECRET,
-    { expiresIn: env.JWT_ACCESS_EXPIRY as any },
+    jwtPrivateKey,
+    { algorithm: "RS256", expiresIn: env.JWT_ACCESS_EXPIRY as any, keyid: env.JWT_KEY_ID },
   );
 
   const refreshToken = jwt.sign(
@@ -223,8 +224,10 @@ export function generateTokens(userId: string, sessionId: string) {
  * Generate admin JWT token
  */
 export function generateAdminToken(adminId: string, role: string) {
-  return jwt.sign({ adminId, role, type: "access" }, env.JWT_ACCESS_SECRET, {
+  return jwt.sign({ adminId, role, type: "access" }, jwtPrivateKey, {
+    algorithm: "RS256",
     expiresIn: "8h",
+    keyid: env.JWT_KEY_ID,
   });
 }
 

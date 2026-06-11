@@ -15,6 +15,7 @@ import {
   notFoundHandler,
 } from "@middleware/errorHandler.middleware";
 import { morganStream } from "@utils/logger";
+import { jwtJWK } from "@config/keys";
 
 // Import route modules
 import authRoutes from "@modules/auth/auth.routes";
@@ -88,6 +89,16 @@ export function createApp(): Express {
       version: "1.0.0",
       timestamp: new Date().toISOString(),
       environment: env.NODE_ENV,
+    });
+  });
+
+  // ============================================================
+  // JWKS PUBLIC KEYS ENDPOINT
+  // ============================================================
+
+  app.get("/.well-known/jwks.json", (_req, res) => {
+    res.status(200).json({
+      keys: [jwtJWK],
     });
   });
 

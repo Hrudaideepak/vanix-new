@@ -19,10 +19,13 @@ const envSchema = z.object({
   REDIS_URL: z.string().default("redis://localhost:6379"),
 
   // JWT
-  JWT_ACCESS_SECRET: z.string().min(32),
+  JWT_ACCESS_SECRET: z.string().min(32).default("temporary-access-secret-for-compatibility"),
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_EXPIRY: z.string().default("15m"),
   JWT_REFRESH_EXPIRY: z.string().default("7d"),
+  JWT_PRIVATE_KEY: z.string().optional(),
+  JWT_PUBLIC_KEY: z.string().optional(),
+  JWT_KEY_ID: z.string().default("vanix-default-key-id"),
 
   // OTP
   OTP_EXPIRY_MINUTES: z.coerce.number().default(5),
