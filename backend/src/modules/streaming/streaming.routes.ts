@@ -90,7 +90,7 @@ router.get(
 
 // Get AES-128 decryption key for HLS streaming
 router.get(
-  "/:contentId/key",
+  "/key/:contentId",
   authenticate,
   async (req: AuthRequest, res, next) => {
     try {
