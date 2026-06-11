@@ -81,6 +81,11 @@ const envSchema = z.object({
 
   // Encryption
   ENCRYPTION_KEY: z.string().optional(),
+
+  // CloudFront Signed Cookies
+  CLOUDFRONT_PRIVATE_KEY: z.string().optional(),
+  CLOUDFRONT_KEY_PAIR_ID: z.string().optional(),
+  CLOUDFRONT_COOKIE_DOMAIN: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

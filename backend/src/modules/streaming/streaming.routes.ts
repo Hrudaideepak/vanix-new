@@ -4,6 +4,8 @@ import { ApiResponse } from "@utils/apiResponse";
 import { prisma } from "@config/database";
 import { AuthRequest } from "@custom-types/index";
 import { signStreamUrl } from "@utils/s3";
+import { generateCloudFrontCookies, CloudFrontCookies } from "@utils/cookieSigner";
+import { env } from "@config/env";
 
 const router = Router();
 
@@ -39,13 +41,45 @@ router.get(
         return;
       }
 
-      // Generate signed URL from Cloudflare R2 for security
-      const signedUrl = await signStreamUrl(streamUrl);
+      let finalStreamUrl = streamUrl;
+      let cfCookies: CloudFrontCookies | null = null;
+
+      try {
+        const urlObj = new URL(streamUrl);
+        const pathParts = urlObj.pathname.split("/");
+        pathParts.pop(); // Remove the filename (e.g. manifest.m3u8)
+        const wildcardUrl = `${urlObj.protocol}//${urlObj.host}${pathParts.join("/")}/*`;
+
+        cfCookies = generateCloudFrontCookies(wildcardUrl);
+
+        if (cfCookies) {
+          const cookieOptions = {
+            httpOnly: true,
+            secure: env.NODE_ENV === "production",
+            sameSite: "strict" as const,
+            domain: env.CLOUDFRONT_COOKIE_DOMAIN || urlObj.hostname,
+            path: "/",
+            maxAge: 7200 * 1000, // 2 hours in ms
+          };
+
+          res.cookie("CloudFront-Policy", cfCookies["CloudFront-Policy"], cookieOptions);
+          res.cookie("CloudFront-Signature", cfCookies["CloudFront-Signature"], cookieOptions);
+          res.cookie("CloudFront-Key-Pair-Id", cfCookies["CloudFront-Key-Pair-Id"], cookieOptions);
+        } else {
+          // Fallback to signed URL if CloudFront cookies are not configured (development/R2)
+          finalStreamUrl = await signStreamUrl(streamUrl);
+        }
+      } catch (err) {
+        // Fallback in case of invalid URL or other errors
+        finalStreamUrl = await signStreamUrl(streamUrl);
+      }
+
       ApiResponse.success({
         res,
         data: {
-          streamUrl: signedUrl,
+          streamUrl: finalStreamUrl,
           type: streamUrl.includes(".m3u8") ? "hls" : "dash",
+          cookies: cfCookies || undefined, // Provide cookies in payload for mobile/non-browser clients
         },
       });
     } catch (error) {
