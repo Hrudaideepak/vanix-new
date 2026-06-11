@@ -8,7 +8,6 @@ import { apiRateLimiter } from "@middleware/rateLimiter.middleware";
 import {
   securityHeaders,
   parameterPollutionProtection,
-  xssSanitizer,
   requestId,
 } from "@middleware/security.middleware";
 import {
@@ -74,7 +73,6 @@ export function createApp(): Express {
 
   // Security
   app.use(parameterPollutionProtection);
-  app.use(xssSanitizer);
 
   // Rate limiting
   app.use(`${env.API_PREFIX}`, apiRateLimiter);

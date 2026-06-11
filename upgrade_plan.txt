@@ -1,0 +1,133 @@
+================================================================================
+🌌 VANIX OTT — PRODUCTION UPGRADE PLAN & ROADMAP (NETFLIX LEVEL)
+================================================================================
+
+This document outlines the master upgrade plan, timeline, capabilities, limits,
+and execution guidelines required to elevate the VANIX streaming platform to a 
+fully production-ready, Netflix-grade OTT platform.
+
+--------------------------------------------------------------------------------
+1. AGENT CAPABILITIES & LIMITATIONS
+--------------------------------------------------------------------------------
+
+To execute this roadmap efficiently, here is a transparent breakdown of what I
+(as Antigravity, your AI coding assistant) can do, and where your input/action is 
+required.
+
+[A] CAPABILITIES (What I can build directly)
+--------------------------------------------
+* Backend Architecture: Write full TypeScript logic for HLS transcoding, Prisma 
+  schema upgrades, recommendation systems, custom analytics aggregation, and API
+  endpoints.
+* State & UI Logic: Design and implement complex Riverpod state notifier/providers
+  in Flutter and build responsive layouts using Tailwind/Vanilla CSS in Next.js.
+* Infrastructure Config: Configure Docker Compose files, database indexing, and 
+  write Prometheus/Grafana configs.
+* Tests & Validation: Write unit, integration, and widget tests for mobile and 
+  backend code, and execute them locally to verify functionality.
+
+[B] LIMITATIONS (Where user intervention/credentials are needed)
+----------------------------------------------------------------
+* Sandbox Restrictions: I cannot run the Flutter app on a physical device or 
+  Android emulator to visually review the mobile UI. I rely on code review and 
+  automated tests.
+* External Account Setup: I cannot create or configure accounts on Google Play 
+  Console, Apple Developer portal, AWS/Cloudflare, Razorpay/Stripe, or MIB 
+  regulatory registration.
+* Secret Keys: You must provide API keys, SMS gateway tokens, Firebase configs,
+  and SSL certificates. I will write code to load them securely from environment
+  variables (`.env`).
+* DRM Licensing: Generating production-level Widevine/FairPlay certificates 
+  requires official Apple/Google developer accounts which must be signed by you.
+
+--------------------------------------------------------------------------------
+2. ARCHITECTURAL & FEATURE UPGRADE ROADMAP
+--------------------------------------------------------------------------------
+
+To match Netflix, the platform must support HLS video delivery, multi-profile
+accounts, robust security/DRM, offline downloads, and automatic recommendation engines.
+
+---
+PHASE 1: HLS VIDEO STREAMING PIPELINE & DRM SECURITY (TIMELINE: WEEK 1)
+---
+* Objective: Prevent buffering, support adaptive bitrate (ABR) streaming, and
+  protect video content from theft.
+* Action Items:
+  1. HLS Transcoding: Upgrade the BullMQ background worker in `backend` to use
+     `fluent-ffmpeg` to transcode uploaded raw video files into HLS format 
+     (generating `.m3u8` playlists and `.ts` segments for 1080p, 720p, 480p).
+  2. Multi-Audio & Subtitles: Modify the video processing pipeline to extract 
+     and package separate audio tracks and WebVTT subtitle tracks.
+  3. Secure Streaming: Integrate CloudFront Signed URLs or Cloudflare R2 Token 
+     Authentication so video files cannot be accessed directly without an active
+     session.
+  4. Basic DRM: Integrate Widevine/FairPlay decryption configuration on the 
+     Flutter mobile player (using the Chewie/video_player packages).
+
+---
+PHASE 2: USER PROFILE & CONTENT PERSONALIZATION (TIMELINE: WEEK 2)
+---
+* Objective: Allow multiple family members to share one account, save favorite
+  shows, and receive personalized recommendations.
+* Action Items:
+  1. Multi-Profile System: Update the database schema to support up to 5 profiles
+     per account (including Kid-lock flags, avatars, names, and separate PIN locks).
+  2. Watchlist & History: Build "My List" database tables and CRUD endpoints. 
+     Track real-time video progress (e.g., save timestamp every 10 seconds of 
+     playback to support "Continue Watching").
+  3. Recommendation Engine: Implement content-based recommendation logic in the
+     backend utilizing user preferences, search history, and genre match rates
+     (integrated via Meilisearch and custom PostgreSQL queries).
+  4. Flutter UI Upgrades: Create the profile selection screen, a custom video 
+     overlay showing "Skip Intro/Recap", and a unified search page.
+
+---
+PHASE 3: STRIPE/RAZORPAY SUBSCRIPTIONS & IN-APP PURCHASES (TIMELINE: WEEK 3)
+---
+* Objective: Ensure reliable recurring revenue, compliant with international
+  and regional payment laws.
+* Action Items:
+  1. In-App Purchases (IAP): Integrate Google Play Billing and Apple In-App 
+     Purchase SDKs in the Flutter app to comply with mobile app store guidelines.
+  2. Webhook Integration: Build resilient webhook endpoints in the backend to
+     receive payment confirmations, subscription upgrades, cancellations, and
+     failed payment notifications from Google, Apple, and Razorpay.
+  3. Subscription State Machine: Develop logic in the backend to handle grace
+     periods, payment failures, account hold statuses, and automatic downgrades.
+
+---
+PHASE 4: OFFLINE DOWNLOADS & MOBILE APP POLISH (TIMELINE: WEEK 4)
+---
+* Objective: Premium mobile app features for users on the go.
+* Action Items:
+  1. Local Video Storage: Implement HLS downloader in Flutter to download `.ts`
+     video segments locally to the user's storage in encrypted format.
+  2. Picture-in-Picture (PiP): Enable PiP mode in the video player screen, allowing
+     users to navigate their device while watching content.
+  3. Push Notifications: Integrate Firebase Cloud Messaging (FCM) to alert users
+     when new movies or episodes of their watched shows are released.
+  4. Casting: Integrate Chromecast and AirPlay APIs into the custom video player.
+
+---
+PHASE 5: CMS PORTAL & GRAPHQL/REST ANALYTICS DASHBOARD (TIMELINE: WEEK 5)
+---
+* Objective: Give administrators full control over media ingestion, monitoring,
+  and financial insights.
+* Action Items:
+  1. CMS Video Ingestion: Upgrade the Next.js admin dashboard to support drag-and-drop
+     video uploads directly to Cloudflare R2 with progress bars and transcode status.
+  2. Hierarchy Management: Add full control over Movies, TV Shows, Seasons, 
+     and Episodes (including thumbnail uploading and metadata tagging).
+  3. Live Metrics: Build real-time analytics dashboards in React showing active
+     streams, concurrent users, bandwidth usage, and signup conversions.
+
+--------------------------------------------------------------------------------
+3. VERIFICATION & DEPLOYMENT PLAN
+--------------------------------------------------------------------------------
+* Stage 1 (Local Integration): Use Docker Compose to test the video pipeline and 
+  run mock tests for billing webhooks locally.
+* Stage 2 (Staging Deploy): Deploy the backend API to a staging environment (e.g., 
+  AWS ECS or DigitalOcean App Platform) and connect it to a test DB.
+* Stage 3 (App Store Submission): Compile the iOS build using Xcode (on a Mac 
+  or via Codemagic CI/CD) and generate Android App Bundles (AAB) to upload to 
+  Google Play Console for closed testing.
